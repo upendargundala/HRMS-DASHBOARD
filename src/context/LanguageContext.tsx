@@ -1,93 +1,102 @@
+// src/context/LanguageContext.tsx
 "use client";
 
-import type React from "react";
-import { createContext, useContext, useState } from "react";
-
-export type LanguageCode = "en" | "hi" | "ta" | "te" | "bn" | "mr";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface LanguageContextType {
-  language: LanguageCode;
-  setLanguage: (lang: LanguageCode) => void;
+  language: string;
+  setLanguage: (lang: string) => void;
   t: (key: string) => string;
 }
 
-const translations: Record<LanguageCode, Record<string, string>> = {
-  en: {
-    dashboard: "Dashboard",
-    employees: "Employee Database",
-    attendance: "Attendance",
-    payroll: "Payroll Management",
-    welcome: "Welcome back",
-    search: "Search records...",
-    logout: "Logout",
-    settings: "Settings",
-    profile: "Profile",
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+interface LanguageProviderProps {
+  children: ReactNode;
+}
+
+// Basic translation dictionary
+const translations: Record<string, Record<string, string>> = {
+  'en-us': {
+    dashboard: 'Dashboard',
+    employees: 'Employees',
+    attendance: 'Attendance',
+    payroll: 'Payroll',
+    recruitment: 'Recruitment',
+    performance_management: 'Performance',
+    documents: 'Documents',
+    exit_management: 'Exit',
+    admin_settings: 'Settings',
+    collapse: 'Collapse',
+    expand: 'Expand',
   },
-  hi: {
-    dashboard: "डैशबोर्ड",
-    employees: "कर्मचारी डेटाबेस",
-    attendance: "उपस्थिति",
-    payroll: "पेरोल प्रबंधन",
-    welcome: "वापस स्वागत है",
-    search: "रिकॉर्ड खोजें...",
-    logout: "लॉगआउट",
-    settings: "सेटिंग्स",
-    profile: "प्रोफ़ाइल",
+  'hi': {
+    dashboard: 'डैशबोर्ड',
+    employees: 'कर्मचारी',
+    attendance: 'उपस्थिति',
+    payroll: 'वेतन',
+    recruitment: 'भर्ती',
+    performance_management: 'प्रदर्शन',
+    documents: 'दस्तावेज़',
+    exit_management: 'निकास',
+    admin_settings: 'सेटिंग्स',
+    collapse: 'संक्षिप्त करें',
+    expand: 'विस्तृत करें',
   },
-  ta: {
-    dashboard: "டாஷ்போர்டு",
-    employees: "பணியாளர் தரவுத்தளம்",
-    attendance: "வருகை",
-    payroll: "ஊதிய மேலாண்மை",
-    welcome: "மீண்டும் வருக",
-    search: "பதிவுகளைத் தேடு...",
-    logout: "வெளியேறு",
-    settings: "அமைப்புகள்",
-    profile: "சுயவிவரம்",
+  'mr': {
+    dashboard: 'डॅशबोर्ड',
+    employees: 'कर्मचारी',
+    attendance: 'उपस्थिती',
+    payroll: 'पेरोल',
+    recruitment: 'भरती',
+    performance_management: 'कामगिरी',
+    documents: 'दस्तऐवज',
+    exit_management: 'बाहेर पडणे',
+    admin_settings: 'सेटिंग्ज',
+    collapse: 'कॉलॅप्स',
+    expand: 'विस्तार',
   },
-  te: {
-    dashboard: "డ్యాష్‌బోర్డ్",
-    employees: "ఉద్యోగుల డేటాబేస్",
-    attendance: "హాజరు",
-    payroll: "పేరోల్ నిర్వహణ",
-    welcome: "తిరిగి స్వాగతం",
-    search: "రికార్డులను శోధించండి...",
-    logout: "లాగ్ అవుట్",
-    settings: "సెట్టింగులు",
-    profile: "ప్రొఫైల్",
-  },
-  bn: {
-    dashboard: "ড্যাশবোর্ড",
-    employees: "কর্মচারী ডাটাবেস",
-    attendance: "উপস্থিতি",
-    payroll: "পেরোল ম্যানেজমেন্ট",
-    welcome: "স্বাগতম",
-    search: "রেকর্ড খুঁজুন...",
-    logout: "লগআউট",
-    settings: "সেটিংস",
-    profile: "প্রোফাইল",
-  },
-  mr: {
-    dashboard: "डॅशबोर्ड",
-    employees: "कर्मचारी डेटाबेस",
-    attendance: "उपस्थिती",
-    payroll: "पेरोल व्यवस्थापन",
-    welcome: "पुन्हा स्वागत आहे",
-    search: "रेकॉर्ड शोधा...",
-    logout: "लॉगआउट",
-    settings: "सेटिंग्ज",
-    profile: "प्रोफाइल",
-  },
+  // Add other languages as needed...
 };
 
-const LanguageContext = createContext<LanguageContextType | undefined>(
-  undefined
-);
+export function LanguageProvider({ children }: LanguageProviderProps) {
+  const [language, setLanguageState] = useState('en-us');
+  const [isClient, setIsClient] = useState(false);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<LanguageCode>("en");
+  useEffect(() => {
+    setIsClient(true);
+    const savedLanguage = localStorage.getItem('hrms-language');
+    if (savedLanguage) {
+      setLanguageState(savedLanguage);
+    }
+  }, []);
 
-  const t = (key: string) => translations[language][key] || key;
+  const setLanguage = (lang: string) => {
+    setLanguageState(lang);
+    if (isClient) {
+      localStorage.setItem('hrms-language', lang);
+    }
+  };
+
+  const t = (key: string): string => {
+    // Return key immediately if not client-side yet
+    if (!isClient) return key;
+    
+    // Try to get translation for current language
+    const langTranslations = translations[language];
+    if (langTranslations && langTranslations[key]) {
+      return langTranslations[key];
+    }
+    
+    // Fallback to English
+    const englishTranslations = translations['en-us'];
+    if (englishTranslations && englishTranslations[key]) {
+      return englishTranslations[key];
+    }
+    
+    // Return the key itself if no translation found
+    return key;
+  };
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
@@ -96,9 +105,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useLanguage = () => {
+export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (!context)
-    throw new Error("useLanguage must be used within LanguageProvider");
+  if (context === undefined) {
+    // Return a default context to prevent crashes
+    return {
+      language: 'en-us',
+      setLanguage: () => {},
+      t: (key: string) => key,
+    };
+  }
   return context;
-};
+}

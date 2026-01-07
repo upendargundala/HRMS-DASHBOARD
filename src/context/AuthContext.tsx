@@ -1,61 +1,62 @@
 "use client";
 
-import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 interface User {
   name: string;
   email: string;
   role: string;
+  profilePicture?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string) => void;
+  updateProfile: (data: Partial<User>) => void;
   logout: () => void;
-  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>({
-    name: "Arjun Sharma",
-    email: "arjun.s@hrms.com",
-    role: "System Administrator",
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Check for user in local storage or session if needed
-    setIsLoading(false);
+    const stored = localStorage.getItem("user");
+    if (stored) setUser(JSON.parse(stored));
+    else {
+      const defaultUser = {
+        name: "Pillalamari Varun",
+        email: "varun@lupira.com",
+        role: "Super Admin",
+      };
+      setUser(defaultUser);
+      localStorage.setItem("user", JSON.stringify(defaultUser));
+    }
   }, []);
 
-  const login = (email: string) => {
-    setUser({
-      name: "Arjun Sharma",
-      email: email,
-      role: "System Administrator",
+  const updateProfile = (data: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...data };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
     });
-    router.push("/");
   };
 
   const logout = () => {
-    setUser(null);
-    router.push("/login");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, updateProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be inside AuthProvider");
+  return ctx;
 };

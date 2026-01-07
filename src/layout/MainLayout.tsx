@@ -1,50 +1,67 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import DashboardSidebar from "./DashboardSidebar";
 import DashboardHeader from "./DashboardHeader";
 import { useAuth } from "@/src/context/AuthContext";
+import { cn } from "@/src/lib/utils";
 
-export default function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { user } = useAuth();
+export default function MainLayout({ children }: { children: React.ReactNode }) {
+  const [isClient, setIsClient] = useState(false);
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  if (isLoginPage || !user) {
-    return <>{children}</>;
+  const isLoginPage = pathname === "/login";
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true); // ✅ ADD
+
+  useEffect(() => {
+    setIsClient(true);
+    setIsSidebarOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (isClient && !isLoading && !user && !isLoginPage) {
+      router.push("/login");
+    }
+  }, [isClient, isLoading, user, isLoginPage, router]);
+
+  if (!isClient || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-100">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-gray-900" />
+      </div>
+    );
   }
 
+  if (isLoginPage || !user) return <>{children}</>;
+
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden">
+    <div className="flex min-h-screen bg-slate-100">
       {/* Sidebar */}
       <DashboardSidebar
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
+        isExpanded={isSidebarExpanded}              
+        setIsExpanded={setIsSidebarExpanded}      
       />
 
-      {/* Content */}
-      <div className="flex flex-1 flex-col lg:pl-64">
+      {/* Dashboard Content */}
+      <div
+        className={cn(
+          "flex-1",
+          isSidebarExpanded ? "lg:ml-64" : "lg:ml-20" // ✅ SYNC WIDTH
+        )}
+      >
         <DashboardHeader setIsSidebarOpen={setIsSidebarOpen} />
 
-        {/* Main scroll area */}
-        <main className="mt-16 flex-1 overflow-y-auto bg-slate-100 p-6">
+        <main className="p-4 md:p-6 mt-16">
           {children}
         </main>
       </div>
-
-      {/* Mobile overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
     </div>
   );
 }
